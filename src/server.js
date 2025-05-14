@@ -1,6 +1,5 @@
 import { config } from 'dotenv';
 import express from 'express';
-import jsonwebtoken from 'jsonwebtoken';
 import authRouter from './routes/auth.routes.js';
 import { connectDB } from './db/config.js'
 

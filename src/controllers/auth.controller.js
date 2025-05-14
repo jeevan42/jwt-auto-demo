@@ -136,6 +136,11 @@ export const LogoutHandler = async (req, res) => {
                 statusCode: 200,
                 message: 'User logged out successfully',
             });
+        } else {
+            return res.status(200).json({
+                statusCode: 200,
+                message: 'User already logged out',
+            });
         }
     } catch (error) {
         res.status(400).json({
