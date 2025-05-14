@@ -4,6 +4,7 @@ This project demonstrates a secure authentication system using **JWT (access + r
 It includes:
 
 - Signup & Login functionality
+- Get profile protected route functionality
 - JWT access token with expiry
 - Refresh token system using `httpOnly` cookie
 - Token blacklist on logout (to prevent reuse)
