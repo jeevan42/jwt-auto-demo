@@ -34,8 +34,20 @@ export const SignupHandler = async (req, res) => {
         const token = jsonWebToken.sign(
             { name, email },
             process.env.JWT_SECRET,
-            { expiresIn: '1h' }
+            { expiresIn: '2m' }
         );
+        const refreshToken = jsonWebToken.sign(
+            { name, email },
+            process.env.REFRESH_JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: false, // ❌ false on localhost (✅ true only in production with HTTPS)
+            sameSite: 'Lax', // Or 'Strict' for tighter control
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
         res.status(201).json({
             statusCode: 201,
             message: 'user created successfully',
@@ -75,8 +87,19 @@ export const LoginHandler = async (req, res) => {
             const token = jsonWebToken.sign(
                 { name: user.name, email },
                 process.env.JWT_SECRET,
-                { expiresIn: '1h' }
+                { expiresIn: '2m' }
             );
+            const refreshToken = jsonWebToken.sign(
+                { name: user.name, email },
+                process.env.REFRESH_JWT_SECRET,
+                { expiresIn: '7d' }
+            );
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: false, // ❌ false on localhost (✅ true only in production with HTTPS)
+                sameSite: 'Lax', // Or 'Strict' for tighter control
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
             res.status(200).json({
                 statusCode: 200,
                 message: 'user logged in successfully',
@@ -100,7 +123,7 @@ export const LoginHandler = async (req, res) => {
 export const GetProfileHandler = async (req, res) => {
     try {
         const { email } = req.user;
-        const user = await User.findOne({ email }, 'name email');
+        const user = await User.findOne({ email });
         if (!user) {
             res.status(404).json({
                 statusCode: 404,
@@ -120,7 +143,6 @@ export const GetProfileHandler = async (req, res) => {
         });
     }
 };
-
 
 export const LogoutHandler = async (req, res) => {
     try {
@@ -149,4 +171,38 @@ export const LogoutHandler = async (req, res) => {
         });
     }
 };
+
+export const refreshTokenHandler = async (req, res) => {
+    try {
+        const token = req.cookies.refreshToken;
+
+        const decoded = jsonWebToken.verify(token, process.env.REFRESH_JWT_SECRET);
+        const newAccessToken = jsonWebToken.sign(
+            { name: decoded.name, email: decoded.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '2m' }
+        );
+        const newRefreshToken = jsonWebToken.sign(
+            { name: decoded.name, email: decoded.email },
+            process.env.REFRESH_JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+        res.cookie('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: false, // ❌ false on localhost (✅ true only in production with HTTPS)
+            sameSite: 'Lax', // Or 'Strict' for tighter control
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+        return res.status(200).json({
+            statusCode: 200,
+            message: 'User access token refreshed successfully',
+            token: newAccessToken
+        });
+    } catch (error) {
+        res.status(400).json({
+            statusCode: 400,
+            message: error.message || 'something went wrong'
+        });
+    }
+}
 
