@@ -1,30 +1,34 @@
-import jwtwebtoken from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
+import { blackListJwt } from '../models/blacklistjwt.model.js';
 
-export const authMiddleware = (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {
     try {
-        const token = req?.headers?.authorization?.split(' ')[1];
-        if (!token) {
-            res.status(401).send({
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
                 statusCode: 401,
-                message: 'unauthorized',
+                message: 'Unauthorized - No token provided',
             });
+        }
+
+        const token = authHeader.split(' ')[1];
+        const isblackListJwt = await blackListJwt.findOne({ token });
+        if (!isblackListJwt) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            req.user = decoded;
+            req.token = token;
+            next();
         } else {
-            const verifiedToken = jwtwebtoken.verify(token, process.env.JWT_SECRET)
-            if (verifiedToken) {
-                req.user = verifiedToken
-                next();
-            } else {
-                res.status(401).send({
-                    statusCode: 401,
-                    message: 'unauthorized',
-                });
-            }
+            return res.status(401).json({
+                statusCode: 401,
+                message: 'Unauthorized - invalid token provided',
+            });
         }
     } catch (error) {
-        // console.log(error)
-        res.status(400).send({
-            statusCode: 400,
-            message: error.message || 'something went wrong'
+        res.status(401).json({
+            statusCode: 401,
+            message: error.message || 'Invalid or expired token',
         });
     }
-}
+};
